@@ -3,6 +3,8 @@ Object detection in images, and tracking across video frames
 
 Thanks to https://github.com/cfotache/pytorch_objectdetecttrack
 
+<img src="https://github.com/BejeweledMe/ObjectTrackingTestTask/blob/main/tracking.gif?raw=true" width="360" height="288" />
+
 ### Short description
 This is my testtask for eora.ru for the middle cv engineer position
 
