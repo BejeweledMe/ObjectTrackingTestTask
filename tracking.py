@@ -30,12 +30,13 @@ def main():
     conf_thres = args.conf_thres
     nms_thres = args.nms_thres
 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = Darknet(config_path, img_size=img_size)
     model.load_weights(weights_path)
-    model.cuda()
+    model.to(device)
     model.eval()
     classes = utils.load_classes(class_path)
-    Tensor = torch.cuda.FloatTensor
+
 
     def detect_image(img):
         '''
@@ -58,11 +59,10 @@ def main():
                                              ])
         # convert image to Tensor
         image_tensor = img_transforms(img).float()
-        image_tensor = image_tensor.unsqueeze_(0)
-        input_img = Variable(image_tensor.type(Tensor))
+        image_tensor = image_tensor.unsqueeze_(0).to(device)
         # run inference on the model and get detections
         with torch.no_grad():
-            detections = model(input_img)
+            detections = model(image_tensor)
             detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)
         return detections[0]
 
@@ -85,10 +85,12 @@ def main():
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # convert to PIL image and detect
         pilimg = Image.fromarray(frame)
         detections = detect_image(pilimg)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         img = np.array(pilimg)
         pad_x = max(img.shape[0] - img.shape[1], 0) * (img_size / max(img.shape))
@@ -119,10 +121,11 @@ def main():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                             (255, 255, 255), 3)
 
+        cv2.imshow('stream', frame)
+
         frames += 1
         # write frame
         out.write(frame)
-        cv2.imshow('stream', frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
