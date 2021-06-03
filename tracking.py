@@ -8,64 +8,65 @@ from utils import utils
 warnings.filterwarnings('ignore')
 
 
+parser = argparse.ArgumentParser()
+arg = parser.add_argument
+arg('--video-path', type=str, default='campus4-c0.avi')
+arg('--write-path', type=str, default='det-campus4-c0.avi')
+arg('--config-path', type=str, default='config/yolov3.cfg')
+arg('--weights-path', type=str, default='config/yolov3.weights')
+arg('--class-path', type=str, default='config/coco.names')
+arg('--img-size', type=int, default=416)
+arg('--conf-thres', type=float, default=0.8)
+arg('--nms-thres', type=float, default=0.4)
+args = parser.parse_args()
+
+videopath = args.video_path
+writepath = args.write_path
+config_path = args.config_path
+weights_path = args.weights_path
+class_path = args.class_path
+img_size = args.img_size
+conf_thres = args.conf_thres
+nms_thres = args.nms_thres
+
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+model = Darknet(config_path, img_size=img_size)
+model.load_weights(weights_path)
+model.to(device)
+model.eval()
+classes = utils.load_classes(class_path)
+
+
+def detect_image(img):
+    '''
+    This function applies transforms to image [resize, padding, to tensor],
+    and then applies detection algorithm
+
+    :param img: PIL image
+    :return: detections
+    '''
+    # scale and pad image
+    ratio = min(img_size / img.size[0], img_size / img.size[1])
+    imw = round(img.size[0] * ratio)
+    imh = round(img.size[1] * ratio)
+    img_transforms = transforms.Compose([transforms.Resize((imh, imw)),
+                                         transforms.Pad((max(int((imh - imw) / 2), 0), max(int((imw - imh) / 2), 0),
+                                                         max(int((imh - imw) / 2), 0),
+                                                         max(int((imw - imh) / 2), 0)),
+                                                        (128, 128, 128)),
+                                         transforms.ToTensor(),
+                                         ])
+    # convert image to Tensor
+    image_tensor = img_transforms(img).float()
+    image_tensor = image_tensor.unsqueeze_(0).to(device)
+    # run inference on the model and get detections
+    with torch.no_grad():
+        detections = model(image_tensor)
+        detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)
+    return detections[0]
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    arg = parser.add_argument
-    arg('--video-path', type=str, default='campus4-c0.avi')
-    arg('--write-path', type=str, default='det-campus4-c0.avi')
-    arg('--config-path', type=str, default='config/yolov3.cfg')
-    arg('--weights-path', type=str, default='config/yolov3.weights')
-    arg('--class-path', type=str, default='config/coco.names')
-    arg('--img-size', type=int, default=416)
-    arg('--conf-thres', type=float, default=0.8)
-    arg('--nms-thres', type=float, default=0.4)
-    args = parser.parse_args()
-
-    videopath = args.video_path
-    writepath = args.write_path
-    config_path = args.config_path
-    weights_path = args.weights_path
-    class_path = args.class_path
-    img_size = args.img_size
-    conf_thres = args.conf_thres
-    nms_thres = args.nms_thres
-
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = Darknet(config_path, img_size=img_size)
-    model.load_weights(weights_path)
-    model.to(device)
-    model.eval()
-    classes = utils.load_classes(class_path)
-
-
-    def detect_image(img):
-        '''
-        This function applies transforms to image [resize, padding, to tensor],
-        and then applies detection algorithm
-
-        :param img: PIL image
-        :return: detections
-        '''
-        # scale and pad image
-        ratio = min(img_size / img.size[0], img_size / img.size[1])
-        imw = round(img.size[0] * ratio)
-        imh = round(img.size[1] * ratio)
-        img_transforms = transforms.Compose([transforms.Resize((imh, imw)),
-                                             transforms.Pad((max(int((imh - imw) / 2), 0), max(int((imw - imh) / 2), 0),
-                                                             max(int((imh - imw) / 2), 0),
-                                                             max(int((imw - imh) / 2), 0)),
-                                                            (128, 128, 128)),
-                                             transforms.ToTensor(),
-                                             ])
-        # convert image to Tensor
-        image_tensor = img_transforms(img).float()
-        image_tensor = image_tensor.unsqueeze_(0).to(device)
-        # run inference on the model and get detections
-        with torch.no_grad():
-            detections = model(image_tensor)
-            detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)
-        return detections[0]
-
     cmap = plt.get_cmap('tab20b')
     colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
