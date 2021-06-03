@@ -18,8 +18,7 @@ and add it to `data` folder
 9. Close all opencv processes
 
 ### Run
-To run predict on videos, you can run `run_tracking.py` file.
-It will run `tracking.py` for 3 videos
+To run predict on videos, you can use `bash run_tracking.sh` in terminal to run `run_tracking.py` file, which will run `tracking.py` for 3 videos
 
 Or you can run `tracking.py` from terminal with arguments
 
